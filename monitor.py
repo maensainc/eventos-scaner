@@ -3,7 +3,7 @@ import time
 import requests
 import boto3
 
-# Parámetros de PredictHQ
+# Configuración PredictHQ
 TOKEN   = os.environ["PREDICTHQ_TOKEN"]
 HEADERS = {"Authorization": f"Bearer {TOKEN}"}
 PARAMS  = {
@@ -13,22 +13,19 @@ PARAMS  = {
 }
 API_URL = "https://api.predicthq.com/v1/events/"
 
-# Cliente DynamoDB y tabla
+# DynamoDB
 dynamo = boto3.resource("dynamodb")
 table  = dynamo.Table(os.environ["DDB_TABLE"])
 
 def check_events():
     resp = requests.get(API_URL, headers=HEADERS, params=PARAMS)
     resp.raise_for_status()
-    data = resp.json().get("results", [])
-
     nuevos = []
-    for ev in data:
+
+    for ev in resp.json().get("results", []):
         ev_id = ev["id"]
-        # Comprueba si existe en DynamoDB
-        r = table.get_item(Key={"id": ev_id})
-        if "Item" not in r:
-            # Si no existe, lo inserta y lo marca como nuevo
+        if "Item" not in table.get_item(Key={"id": ev_id}):
+            # Nuevo: guardar en DynamoDB
             item = {
                 "id":       ev_id,
                 "title":    ev["title"],

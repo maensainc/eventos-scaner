@@ -3,23 +3,21 @@ import json
 import boto3
 from monitor import check_events
 
-# Cliente SNS
-sns = boto3.client("sns")
-TOPIC_ARN = os.environ["SNS_TOPIC_ARN"]
+sns    = boto3.client("sns")
+TOPIC  = os.environ["SNS_TOPIC_ARN"]
 
 def lambda_handler(event, context):
     nuevos = check_events()
     if nuevos:
-        # Construye el mensaje
+        # Construir mensaje para email
         lines = [f"[{e['category']}] {e['title']} — {e['start']} ({e['country']})"
                  for e in nuevos]
-        mensaje = "\n".join(lines)
         sns.publish(
-            TopicArn=TOPIC_ARN,
+            TopicArn=TOPIC,
             Subject=f"{len(nuevos)} eventos nuevos",
-            Message=mensaje
+            Message="\n".join(lines)
         )
     return {
         "statusCode": 200,
-        "body": json.dumps({"new_count": len(nuevos)})
+        "body": json.dumps({"new": len(nuevos)})
     }
